@@ -1,6 +1,24 @@
-version: '3.2'
+version: '3.4'
 
 services:
+
+  rabbitmq:
+    container_name: rabbit-mq
+    image: rabbitmq:3-management-alpine
+    volumes:
+      - type: volume
+        source: rabbitmq
+        target: /var/lib/rabbitmq/mnesia
+    ports:
+      - "15672:15672"
+      - "5672:5672" 
+    networks:
+      - elk
+    environment:
+      RABBITMQ_DEFAULT_USER: logUser
+      RABBITMQ_DEFAULT_PASS: logPwd
+      RABBITMQ_DEFAULT_VHOST: logs
+
   elasticsearch:
     build:
       context: elasticsearch/
@@ -20,6 +38,11 @@ services:
     environment:
       ES_JAVA_OPTS: "-Xmx256m -Xms256m"
       ELASTIC_PASSWORD: changeme
+    healthcheck:
+      test: ["CMD-SHELL", "curl -I -s -L http://localhost:9200 || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
     networks:
       - elk
 
@@ -59,10 +82,39 @@ services:
         read_only: true
     ports:
       - "5601:5601"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -I -s -L http://localhost:5601/ || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 5  
     networks:
       - elk
     depends_on:
       - elasticsearch
+
+  metricbeat:
+    container_name: metricbeat
+    user: root # Need root because the `docker.sock` stats
+    build: 
+      context: metricbeat/
+      args:
+        ELK_VERSION: $ELK_VERSION        
+    volumes:
+      - type: bind
+        source: ./metricbeat/config/metricbeat.yml
+        target: /usr/share/metricbeat/metricbeat.yml
+        read_only: true
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+    depends_on:
+      - elasticsearch
+      - kibana
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - elk
 
 networks:
   elk:
@@ -70,3 +122,4 @@ networks:
 
 volumes:
   elasticsearch:
+  rabbitmq:

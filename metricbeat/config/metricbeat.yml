@@ -1,0 +1,39 @@
+metricbeat.modules:
+- module: docker
+  metricsets: ["container", "cpu", "diskio", "healthcheck", "info", "memory", "network"]
+  hosts: ["unix:///var/run/docker.sock"]
+  period: 10s
+
+- module: elasticsearch
+  metricsets: ["node", "node_stats"]
+  period: 10s
+  hosts: ["elasticsearch:9200"]
+  username: "elastic"
+  password: "changeme"
+
+- module: rabbitmq
+  metricsets: ["node", "queue"]
+  period: 10s
+  hosts: ["rabbitmq:15672"]
+  username: logUser
+  password: logPwd
+
+#- module: mysql
+#  metricsets: ["status"]
+#  period: 10s
+#  hosts: ["tcp(localhost:3306)/"]
+#  username: root
+#  password: 123456
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  username: "elastic"
+  password: "changeme"
+
+setup.kibana:
+  host: "kibana:5601"  
+  username: "elastic" 
+  password: "changeme" 
+
+
+setup.dashboards.enabled: true
